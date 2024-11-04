@@ -18,7 +18,7 @@ ag = AlgoritmoGenetico(
 melhor_rota, melhor_tempo = ag.evoluir()
 
 # Geração do arquivo CSV com a melhor rota
-ag.gerar_csv_solucao(melhor_rota, nome_arquivo='solucao1.csv')
+ag.gerar_csv_solucao(melhor_rota, nome_arquivo='solucao.csv')
 
 print(f"Melhor rota encontrada: {melhor_rota}")
 print(f"Tempo total (s): {melhor_tempo}")

@@ -93,13 +93,15 @@ class AlgoritmoGenetico:
 
     @staticmethod
     def cruzamento(pai1, pai2):
-        ponto_corte = random.randint(1, len(pai1) - 1)
+        ponto_corte = random.randint(1, len(pai1) - 2)  # Evita alterar o primeiro e último pontos
         filho = pai1[:ponto_corte] + [cidade for cidade in pai2 if cidade not in pai1[:ponto_corte]]
+        filho[0] = pai1[0]  # Garante que o início é UniBrasil
+        filho[-1] = pai1[-1]  # Garante que o final é UniBrasil
         return filho
 
     @staticmethod
     def mutacao(individuo):
-        i, j = random.sample(range(len(individuo)), 2)
+        i, j = random.sample(range(1, len(individuo) - 1), 2)  # Evita alterar o primeiro e último pontos
         individuo[i], individuo[j] = individuo[j], individuo[i]
 
     def evoluir(self):
@@ -114,14 +116,28 @@ class AlgoritmoGenetico:
                 filho = self.cruzamento(pai1, pai2)
                 if random.random() < 0.1:
                     self.mutacao(filho)
+                # Garante que a última posição do filho seja sempre a UniBrasil
+                filho[-1] = self.coordenadas['cep'].iloc[0]
                 nova_populacao.append(filho)
 
             self.populacao = nova_populacao
 
         melhor_fitness, melhor_rota = fitnesses[0]
+        cep_unibrasil = self.coordenadas['cep'].iloc[0]  # Assumindo que o primeiro CEP é o da UniBrasil
+
+        # Força o último ponto da rota para ser o CEP da UniBrasil
+        if melhor_rota[-1] != cep_unibrasil:
+            melhor_rota = melhor_rota[:-1] + [cep_unibrasil]
+
         return melhor_rota, 1 / melhor_fitness
 
     def gerar_csv_solucao(self, melhor_rota, nome_arquivo='solucao1.csv'):
+        cep_unibrasil = self.coordenadas['cep'].iloc[0]  # CEP da UniBrasil
+
+        # Garante que o último ponto seja a UniBrasil
+        if melhor_rota[-1] != cep_unibrasil:
+            melhor_rota[-1] = cep_unibrasil
+
         with open(nome_arquivo, 'w', newline='') as csvfile:
             fieldnames = ['CEP inicial', 'Latitude inicial', 'Longitude inicial', 'Dia do voo',
                           'Hora inicial', 'Velocidade', 'CEP final', 'Latitude final', 'Longitude final',
@@ -203,5 +219,22 @@ class AlgoritmoGenetico:
                     'Pouso': pouso,
                     'Hora final': hora_formatada_fim
                 })
+
+            # Garantir que o último ponto registrado no CSV seja a UniBrasil
+            if melhor_rota[-1] == cep_unibrasil:
+                dados_ultimo_ponto = {
+                    'CEP inicial': melhor_rota[-2],
+                    'Latitude inicial': lat1,
+                    'Longitude inicial': lon1,
+                    'Dia do voo': dia_atual,
+                    'Hora inicial': hora_formatada_fim,
+                    'Velocidade': velocidade_ajustada,
+                    'CEP final': cep_unibrasil,
+                    'Latitude final': self.coordenadas['latitude'].iloc[0],
+                    'Longitude final': self.coordenadas['longitude'].iloc[0],
+                    'Pouso': 'SIM',
+                    'Hora final': f"{(hora_atual + 60) // 3600:02}:{((hora_atual + 60) % 3600) // 60:02}:00"
+                }
+                writer.writerow(dados_ultimo_ponto)
 
         print(f"Arquivo CSV '{nome_arquivo}' gerado com sucesso.")
