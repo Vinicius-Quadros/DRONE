@@ -138,7 +138,7 @@ class AlgoritmoGenetico:
         if melhor_rota[-1] != cep_unibrasil:
             melhor_rota[-1] = cep_unibrasil
 
-        with open(nome_arquivo, 'w', newline='') as csvfile:
+        with open(nome_arquivo, 'w', newline='',encoding='utf-8') as csvfile:
             fieldnames = ['CEP inicial', 'Latitude inicial', 'Longitude inicial', 'Dia do voo',
                           'Hora inicial', 'Velocidade', 'CEP final', 'Latitude final', 'Longitude final',
                           'Pouso', 'Hora final']
