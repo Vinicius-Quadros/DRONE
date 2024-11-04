@@ -205,6 +205,9 @@ class AlgoritmoGenetico:
                 hora_atual += 60
                 bateria_restante -= 60
 
+                if dia_atual > 5:
+                    dia_atual = 5
+
                 # Gravar os dados do trecho no arquivo CSV
                 writer.writerow({
                     'CEP inicial': cep_inicial,
@@ -220,21 +223,5 @@ class AlgoritmoGenetico:
                     'Hora final': hora_formatada_fim
                 })
 
-            # Garantir que o último ponto registrado no CSV seja a UniBrasil
-            if melhor_rota[-1] == cep_unibrasil:
-                dados_ultimo_ponto = {
-                    'CEP inicial': melhor_rota[-2],
-                    'Latitude inicial': lat1,
-                    'Longitude inicial': lon1,
-                    'Dia do voo': dia_atual,
-                    'Hora inicial': hora_formatada_fim,
-                    'Velocidade': velocidade_ajustada,
-                    'CEP final': cep_unibrasil,
-                    'Latitude final': self.coordenadas['latitude'].iloc[0],
-                    'Longitude final': self.coordenadas['longitude'].iloc[0],
-                    'Pouso': 'SIM',
-                    'Hora final': f"{(hora_atual + 60) // 3600:02}:{((hora_atual + 60) % 3600) // 60:02}:00"
-                }
-                writer.writerow(dados_ultimo_ponto)
 
         print(f"Arquivo CSV '{nome_arquivo}' gerado com sucesso.")
