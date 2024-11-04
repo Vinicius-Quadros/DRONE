@@ -78,7 +78,8 @@ class AlgoritmoGenetico:
 
         return 1 / (tempo_total + custo_total)
 
-    def obtem_previsao_vento(self, dia, hora):
+    @staticmethod
+    def obtem_previsao_vento(dia, hora):
         # Arredonda o horário para o múltiplo de 3 horas mais próximo: 06:00, 09:00, 12:00, etc.
         horas_disponiveis = [6, 9, 12, 15, 18]  # Horários padrão da previsão
         hora_atual = hora // 3600  # Converter de segundos para horas
@@ -90,12 +91,14 @@ class AlgoritmoGenetico:
         pais = random.sample(self.populacao, 2)
         return pais[0], pais[1]
 
-    def cruzamento(self, pai1, pai2):
+    @staticmethod
+    def cruzamento(pai1, pai2):
         ponto_corte = random.randint(1, len(pai1) - 1)
         filho = pai1[:ponto_corte] + [cidade for cidade in pai2 if cidade not in pai1[:ponto_corte]]
         return filho
 
-    def mutacao(self, individuo):
+    @staticmethod
+    def mutacao(individuo):
         i, j = random.sample(range(len(individuo)), 2)
         individuo[i], individuo[j] = individuo[j], individuo[i]
 
