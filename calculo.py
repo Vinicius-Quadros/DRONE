@@ -17,7 +17,8 @@ def calcula_distancia(lat1, lon1, lat2, lon2):
 def ajusta_velocidade(velocidade_base, vento_velocidade, vento_angulo, angulo_voo):
     ajuste = math.cos(math.radians(vento_angulo - angulo_voo)) * vento_velocidade
     velocidade_ajustada = velocidade_base + ajuste
-    return max(30, min(60, velocidade_ajustada))
+    return int(max(30, min(60, velocidade_ajustada)))
+
 
 
 # Função para calcular o ângulo de voo entre dois pontos
