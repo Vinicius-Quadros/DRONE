@@ -132,9 +132,9 @@ class AlgoritmoGenetico:
         return melhor_rota, 1 / melhor_fitness
 
     def gerar_csv_solucao(self, melhor_rota, nome_arquivo='solucao.csv'):
-        cep_unibrasil = self.coordenadas['cep'].iloc[0]
+        cep_unibrasil = self.coordenadas['cep'].iloc[0]  # CEP da UniBrasil
         if melhor_rota[-1] != cep_unibrasil:
-            melhor_rota[-1] = cep_unibrasil
+            melhor_rota[-1] = cep_unibrasil  # Força o retorno ao final
 
         with open(nome_arquivo, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['CEP inicial', 'Latitude inicial', 'Longitude inicial', 'Dia do voo',
@@ -174,20 +174,41 @@ class AlgoritmoGenetico:
 
                 # Verifica se o tempo de voo atual ultrapassa 19:00
                 if hora_atual + tempo_voo > 68400:
-                    # Registra pouso no ponto final do dia e reinicia no próximo dia
-                    # writer.writerow({
-                    #     'CEP inicial': cep_inicial,
-                    #     'Latitude inicial': lat1,
-                    #     'Longitude inicial': lon1,
-                    #     'Dia do voo': dia_atual,
-                    #     'Hora inicial': hora_formatada_inicio,
-                    #     'Velocidade': 0,
-                    #     'CEP final': cep_inicial,
-                    #     'Latitude final': lat1,
-                    #     'Longitude final': lon1,
-                    #     'Pouso': 'SIM',
-                    #     'Hora final': '19:00:00'
-                    # })
+                    # Se for o último dia, força o retorno à UniBrasil
+                    if dia_atual == 5 and cep_final != cep_unibrasil:
+                        coord_final = self.coordenadas[self.coordenadas['cep'] == cep_unibrasil]
+                        lat2, lon2 = coord_final['latitude'].values[0], coord_final['longitude'].values[0]
+                        distancia = calcula_distancia(lat1, lon1, lat2, lon2)  # Recalcula a distância
+                        tempo_voo = distancia / (self.velocidade_base * 1000 / 3600)
+                        tempo_voo = math.ceil(tempo_voo)  # Recalcula o tempo de voo com a velocidade base
+
+                        writer.writerow({
+                            'CEP inicial': cep_inicial,
+                            'Latitude inicial': lat1,
+                            'Longitude inicial': lon1,
+                            'Dia do voo': dia_atual,
+                            'Hora inicial': hora_formatada_inicio,
+                            'Velocidade': self.velocidade_base,  # Usa a velocidade base para o último voo
+                            'CEP final': cep_unibrasil,
+                            'Latitude final': lat2,
+                            'Longitude final': lon2,
+                            'Pouso': 'SIM',
+                            'Hora final': '18:00:00'
+                        })
+                    # else:
+                    #     writer.writerow({
+                    #         'CEP inicial': cep_inicial,
+                    #         'Latitude inicial': lat1,
+                    #         'Longitude inicial': lon1,
+                    #         'Dia do voo': dia_atual,
+                    #         'Hora inicial': hora_formatada_inicio,
+                    #         'Velocidade': 0,
+                    #         'CEP final': cep_inicial,
+                    #         'Latitude final': lat1,
+                    #         'Longitude final': lon1,
+                    #         'Pouso': 'SIM',
+                    #         'Hora final': '19:00:00'
+                    #     })
                     cep_inicial = cep_inicial
                     hora_atual = 21600  # Reinicia no próximo dia às 06:00:00
                     dia_atual += 1
@@ -222,3 +243,28 @@ class AlgoritmoGenetico:
 
                 # Adiciona 1 minuto ao horário para o início da próxima linha
                 hora_atual += 60
+
+            # Verifica se o drone finalizou no último dia e está na UniBrasil
+            if dia_atual == 5 and cep_inicial != cep_unibrasil:
+                coord_final = self.coordenadas[self.coordenadas['cep'] == cep_unibrasil]
+                lat1, lon1 = coord_final['latitude'].values[0]
+                lon1 = coord_final['longitude'].values[0]
+                distancia = calcula_distancia(lat2, lon2, lat1, lon1)  # Recalcula a distância
+                tempo_voo = distancia / (self.velocidade_base * 1000 / 3600)
+                tempo_voo = math.ceil(tempo_voo)
+
+                writer.writerow({
+                    'CEP inicial': cep_inicial,
+                    'Latitude inicial': lat2,
+                    'Longitude inicial': lon2,
+                    'Dia do voo': dia_atual,
+                    'Hora inicial': hora_formatada_fim,
+                    'Velocidade': self.velocidade_base,
+                    'CEP final': cep_unibrasil,
+                    'Latitude final': lat1,
+                    'Longitude final': lon1,
+                    'Pouso': 'SIM',
+                    'Hora final': '18:00:00'  # ou ajuste conforme necessário
+                })
+
+
