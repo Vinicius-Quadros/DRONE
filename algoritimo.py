@@ -131,14 +131,12 @@ class AlgoritmoGenetico:
 
         return melhor_rota, 1 / melhor_fitness
 
-    def gerar_csv_solucao(self, melhor_rota, nome_arquivo='solucao1.csv'):
-        cep_unibrasil = self.coordenadas['cep'].iloc[0]  # CEP da UniBrasil
-
-        # Garante que o último ponto seja a UniBrasil
+    def gerar_csv_solucao(self, melhor_rota, nome_arquivo='solucao.csv'):
+        cep_unibrasil = self.coordenadas['cep'].iloc[0]
         if melhor_rota[-1] != cep_unibrasil:
             melhor_rota[-1] = cep_unibrasil
 
-        with open(nome_arquivo, 'w', newline='',encoding='utf-8') as csvfile:
+        with open(nome_arquivo, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['CEP inicial', 'Latitude inicial', 'Longitude inicial', 'Dia do voo',
                           'Hora inicial', 'Velocidade', 'CEP final', 'Latitude final', 'Longitude final',
                           'Pouso', 'Hora final']
@@ -148,67 +146,60 @@ class AlgoritmoGenetico:
             hora_atual = 21600  # 06:00:00 em segundos
             dia_atual = 1
             bateria_restante = 1800  # Autonomia inicial em segundos (30 minutos)
+            cep_inicial = melhor_rota[0]  # Iniciar sempre na UniBrasil
 
             for i in range(1, len(melhor_rota)):
-                if dia_atual > 5:  # Limite de dias atingido
-                    print("Atingido o limite de 5 dias. Encerrando a geração do CSV.")
+                if dia_atual > 5:
                     break
 
-                cep_inicial = melhor_rota[i - 1]
                 cep_final = melhor_rota[i]
                 coord_inicial = self.coordenadas[self.coordenadas['cep'] == cep_inicial]
                 coord_final = self.coordenadas[self.coordenadas['cep'] == cep_final]
                 lat1, lon1 = coord_inicial['latitude'].values[0], coord_inicial['longitude'].values[0]
                 lat2, lon2 = coord_final['latitude'].values[0], coord_final['longitude'].values[0]
 
-                # Calcular a distância e o ângulo de voo
                 distancia = calcula_distancia(lat1, lon1, lat2, lon2)
                 angulo_voo = calcula_angulo(lat1, lon1, lat2, lon2)
-
-                # Obter a previsão de vento para ajustar a velocidade
                 dia_voo, horario_voo = self.obtem_previsao_vento(dia_atual, hora_atual)
-                if dia_voo in self.vento_previsao and horario_voo in self.vento_previsao[dia_voo]:
-                    velocidade_ajustada = ajusta_velocidade(
-                        self.velocidade_base,
-                        self.vento_previsao[dia_voo][horario_voo]['velocidade'],
-                        self.vento_previsao[dia_voo][horario_voo]['angulo'],
-                        angulo_voo
-                    )
-                else:
-                    # Usar valores padrão se o dia ou horário não existir na previsão de vento
-                    print(f"Usando valores padrão para dia {dia_voo}, horário {horario_voo}")
-                    velocidade_ajustada = self.velocidade_base
+                velocidade_ajustada = ajusta_velocidade(
+                    self.velocidade_base,
+                    self.vento_previsao[dia_voo][horario_voo]['velocidade'],
+                    self.vento_previsao[dia_voo][horario_voo]['angulo'],
+                    angulo_voo
+                )
 
-                # Calcular o tempo de voo e ajustar a hora
                 tempo_voo = distancia / (velocidade_ajustada * 1000 / 3600)
                 tempo_voo = math.ceil(tempo_voo)
                 hora_formatada_inicio = f"{hora_atual // 3600:02}:{(hora_atual % 3600) // 60:02}:00"
+
+                # Verifica se o tempo de voo atual ultrapassa 19:00
+                if hora_atual + tempo_voo > 68400:
+                    # Registra pouso no ponto final do dia e reinicia no próximo dia
+                    # writer.writerow({
+                    #     'CEP inicial': cep_inicial,
+                    #     'Latitude inicial': lat1,
+                    #     'Longitude inicial': lon1,
+                    #     'Dia do voo': dia_atual,
+                    #     'Hora inicial': hora_formatada_inicio,
+                    #     'Velocidade': 0,
+                    #     'CEP final': cep_inicial,
+                    #     'Latitude final': lat1,
+                    #     'Longitude final': lon1,
+                    #     'Pouso': 'SIM',
+                    #     'Hora final': '19:00:00'
+                    # })
+                    cep_inicial = cep_inicial
+                    hora_atual = 21600  # Reinicia no próximo dia às 06:00:00
+                    dia_atual += 1
+                    bateria_restante = 1800
+                    if dia_atual > 5:
+                        break
+                    continue
+
+                # Atualiza o estado após o voo
                 hora_atual += tempo_voo
                 hora_formatada_fim = f"{hora_atual // 3600:02}:{(hora_atual % 3600) // 60:02}:00"
-
-                # Ajustar o consumo de bateria
-                bateria_restante -= tempo_voo
-
-                # Verificar se precisa recarregar
-                pouso = 'NÃO'
-                if bateria_restante <= 0 or hora_atual >= 68400:  # 19:00:00 em segundos
-                    pouso = 'SIM'
-                    bateria_restante = 1800  # Recarregar a bateria
-                    if hora_atual >= 68400:  # Se for após 19:00, avançar para o próximo dia
-                        dia_atual += 1
-                        hora_atual = 21600  # Reiniciar para 06:00:00 do dia seguinte
-                    else:
-                        hora_atual += 60  # Adicionar 60 segundos para recarga durante o dia
-                    hora_formatada_fim = f"{hora_atual // 3600:02}:{(hora_atual % 3600) // 60:02}:00"
-
-                # Adicionar o tempo de tirar fotos (60 segundos)
-                hora_atual += 60
-                bateria_restante -= 60
-
-                if dia_atual > 5:
-                    dia_atual = 5
-
-                # Gravar os dados do trecho no arquivo CSV
+                pouso_necessario = bateria_restante <= tempo_voo or hora_atual >= 68400
                 writer.writerow({
                     'CEP inicial': cep_inicial,
                     'Latitude inicial': lat1,
@@ -219,9 +210,15 @@ class AlgoritmoGenetico:
                     'CEP final': cep_final,
                     'Latitude final': lat2,
                     'Longitude final': lon2,
-                    'Pouso': pouso,
+                    'Pouso': 'SIM' if pouso_necessario else 'NÃO',
                     'Hora final': hora_formatada_fim
                 })
 
+                # Atualiza a bateria e o próximo ponto inicial
+                bateria_restante -= tempo_voo
+                if pouso_necessario:
+                    bateria_restante = 1800
+                cep_inicial = cep_final
 
-        print(f"Arquivo CSV '{nome_arquivo}' gerado com sucesso.")
+                # Adiciona 1 minuto ao horário para o início da próxima linha
+                hora_atual += 60
