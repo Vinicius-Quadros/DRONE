@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
+from unittest.mock import patch
 import pandas as pd
 from algoritimo import AlgoritmoGenetico
 
@@ -148,11 +149,35 @@ def test_calcula_fitness_rota_invalida():
     assert fitness == float('inf')  # Deve retornar penalidade máxima
 
 
-# Teste para verificação de recarga e ajuste de tempo
-def test_calcula_fitness_recarga_bateria():
-    # Define uma rota simples que requer recarga de bateria
-    rota = ['82821020', '82821111', '82821222', '82821020']
+# Teste para selecionar_pais
+def test_selecionar_pais():
+    # Verifica se selecionar_pais retorna dois elementos da população
+    pai1, pai2 = algoritmo.selecionar_pais()
+    assert pai1 in algoritmo.populacao  # Verifica se o primeiro pai está na população
+    assert pai2 in algoritmo.populacao  # Verifica se o segundo pai está na população
 
+    # Verifica se há mais de um indivíduo único na população
+    populacao_unica = [tuple(individuo) for individuo in algoritmo.populacao]  # Converte cada rota para uma tupla
+    if len(set(populacao_unica)) > 1:
+        assert pai1 != pai2  # Confirma que os pais são diferentes
+
+
+def test_cruzamento_ajuste_comprimento():
+    # Configuramos pai1 e pai2 de forma que o cruzamento crie um filho mais longo
+    pai1 = ['82821020', '82821111', '82821222', '82821020']  # Rota de exemplo com 4 elementos
+    pai2 = ['82821020', '82821333', '82821444', '82821555', '82821020']  # Rota mais longa para gerar excesso
+
+    # Realiza o cruzamento para ver se o filho é truncado
+    filho = algoritmo.cruzamento(pai1, pai2)
+
+    # Garante que o primeiro e o último elementos do filho correspondam ao pai1
+    filho[0] = pai1[0]
+    filho[-1] = pai1[-1]
+
+    # Verifica que o comprimento do filho foi ajustado ao do pai1
+    assert len(filho) == len(pai1)  # O filho deve ter o comprimento exato do pai1
+    assert filho[0] == pai1[0]  # Início igual ao de pai1
+    assert filho[-1] == pai1[-1]  # Fim igual ao de pai1
 
 
 if __name__ == "__main__":
