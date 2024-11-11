@@ -93,10 +93,27 @@ class AlgoritmoGenetico:
 
     @staticmethod
     def cruzamento(pai1, pai2):
-        ponto_corte = random.randint(1, len(pai1) - 2)  # Evita alterar o primeiro e último pontos
-        filho = pai1[:ponto_corte] + [cidade for cidade in pai2 if cidade not in pai1[:ponto_corte]]
-        filho[0] = pai1[0]  # Garante que o início é UniBrasil
-        filho[-1] = pai1[-1]  # Garante que o final é UniBrasil
+        ponto_corte = random.randint(1, len(pai1) - 2)  # Define ponto de corte sem alterar início/fim
+        filho = pai1[:ponto_corte]  # Primeira parte do filho vem do pai1 até o ponto de corte
+
+        # Adiciona as cidades do pai2 que ainda não estão no filho, mantendo a ordem
+        for cidade in pai2:
+            if cidade not in filho:
+                filho.append(cidade)
+
+        # Garante que o início e o fim do filho sejam os mesmos do pai1
+        filho[0] = pai1[0]
+        filho[-1] = pai1[-1]
+
+        # Ajusta o tamanho do filho se necessário
+        if len(filho) > len(pai1):
+            filho = filho[:len(pai1)]
+        elif len(filho) < len(pai1):
+            # Adiciona pontos que possam estar faltando para garantir o tamanho correto
+            for cidade in pai1:
+                if cidade not in filho:
+                    filho.insert(-1, cidade)  # Insere antes do último ponto
+
         return filho
 
     @staticmethod
