@@ -2,7 +2,7 @@ from calculo import calcula_angulo,calcula_distancia,ajusta_velocidade
 import math
 import random
 import csv
-
+from datetime import datetime
 
 class AlgoritmoGenetico:
     def __init__(self, coordenadas, populacao_tamanho, geracoes, velocidade_base, vento_previsao):
@@ -122,8 +122,7 @@ class AlgoritmoGenetico:
         individuo[i], individuo[j] = individuo[j], individuo[i]
 
     def evoluir(self):
-        for geracao in range(self.geracoes):
-            print(f"Geracao: {geracao + 1}/{self.geracoes}")  # Depuração: indica o progresso
+        for _ in range(self.geracoes):
             fitnesses = [(self.calcula_fitness(rota), rota) for rota in self.populacao]
             fitnesses.sort(reverse=True, key=lambda x: x[0])
             nova_populacao = [rota for _, rota in fitnesses[:2]]
@@ -133,16 +132,14 @@ class AlgoritmoGenetico:
                 filho = self.cruzamento(pai1, pai2)
                 if random.random() < 0.1:
                     self.mutacao(filho)
-                # Garante que a última posição do filho seja sempre a UniBrasil
                 filho[-1] = self.coordenadas['cep'].iloc[0]
                 nova_populacao.append(filho)
 
             self.populacao = nova_populacao
 
         melhor_fitness, melhor_rota = fitnesses[0]
-        cep_unibrasil = self.coordenadas['cep'].iloc[0]  # Assumindo que o primeiro CEP é o da UniBrasil
+        cep_unibrasil = self.coordenadas['cep'].iloc[0]
 
-        # Força o último ponto da rota para ser o CEP da UniBrasil
         if melhor_rota[-1] != cep_unibrasil:
             melhor_rota = melhor_rota[:-1] + [cep_unibrasil]
 
@@ -249,3 +246,20 @@ class AlgoritmoGenetico:
 
                 # Adiciona 1 minuto ao horário para o início da próxima linha
                 hora_atual += 60
+
+def verifica_arquivo_solucao(nome_arquivo='solucao.csv'):
+    try:
+        with open(nome_arquivo, 'r', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            ultima_linha = None
+            for row in reader:
+                ultima_linha = row
+
+        if ultima_linha:
+            horario_final_str = ultima_linha['Hora final']
+            horario_final = datetime.strptime(horario_final_str, "%H:%M:%S").time()
+            limite = datetime.strptime("19:00:00", "%H:%M:%S").time()
+            return horario_final <= limite
+        return False
+    except FileNotFoundError:
+        return False

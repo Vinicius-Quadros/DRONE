@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import pytest
 from unittest.mock import patch
 import pandas as pd
-from algoritimo import AlgoritmoGenetico
+from algoritimo import AlgoritmoGenetico, verifica_arquivo_solucao
 
 # Configuração de dados fictícios para o teste
 coordenadas_data = {
@@ -40,6 +40,35 @@ def test_calcula_fitness():
     fitness = algoritmo.calcula_fitness(rota)
     assert isinstance(fitness, float)
     assert fitness > 0  # Espera-se um valor de fitness positivo
+
+def test_calcula_fitness_bateria_e_horario():
+    # Dados fictícios para configurar uma rota que force o drone a recarregar e respeitar o limite de horário
+    coordenadas_data = {
+        'cep': ['82821020', '82821111', '82821222', '82821020'],
+        'latitude': [-25.4284, -25.4294, -25.4304, -25.4284],
+        'longitude': [-49.2733, -49.2743, -49.2753, -49.2733]
+    }
+    coordenadas = pd.DataFrame(coordenadas_data)
+    vento_previsao = {
+        1: {'06:00:00': {'velocidade': 10, 'angulo': 90}, '09:00:00': {'velocidade': 5, 'angulo': 180}},
+        2: {'06:00:00': {'velocidade': 15, 'angulo': 270}, '09:00:00': {'velocidade': 20, 'angulo': 0}},
+    }
+
+    # Instância do AlgoritmoGenetico com parâmetros para forçar recarga e troca de dia
+    algoritmo = AlgoritmoGenetico(coordenadas, populacao_tamanho=2, geracoes=2, velocidade_base=30, vento_previsao=vento_previsao)
+
+    # Rota longa para forçar recargas e ultrapassar o limite de 19:00
+    rota = ['82821020', '82821111', '82821222', '82821020'] * 10  # Repetida para simular uma rota extensa
+
+    # Calcula o fitness e cobre as linhas que verificam bateria e horário
+    fitness = algoritmo.calcula_fitness(rota)
+
+    # Verificações de tipo e valor (apenas garantindo execução)
+    assert isinstance(fitness, float)
+    assert fitness > 0  # Verifica que o fitness é positivo
+
+    # Espera-se que o custo total de recarga tenha sido aplicado, pois a bateria deve ter se esgotado
+    # e o horário deve ter avançado para o próximo dia pelo menos uma vez
 
 
 # Teste para obtem_previsao_vento
@@ -180,5 +209,37 @@ def test_cruzamento_ajuste_comprimento():
     assert filho[-1] == pai1[-1]  # Fim igual ao de pai1
 
 
-if __name__ == "__main__":
-    pytest.main()
+def test_verifica_arquivo_solucao():
+    # Nome do arquivo CSV temporário para o teste
+    nome_arquivo = 'solucao_teste.csv'
+
+    # Conteúdo simulado para o CSV (linha de cabeçalho + uma linha com horário final antes de 19:00)
+    conteudo_csv = """CEP inicial,Latitude inicial,Longitude inicial,Dia do voo,Hora inicial,Velocidade,CEP final,Latitude final,Longitude final,Pouso,Hora final
+82821020,-25.4284,-49.2733,5,18:30:00,50,82821020,-25.4284,-49.2733,SIM,18:59:00
+"""
+
+    # Cria o arquivo CSV temporário
+    with open(nome_arquivo, 'w', encoding='utf-8') as f:
+        f.write(conteudo_csv)
+
+    # Executa a função e verifica se retorna True (o horário final está antes de 19:00)
+    assert verifica_arquivo_solucao(nome_arquivo) == True
+
+    # Conteúdo simulado para o CSV com horário final após 19:00
+    conteudo_csv = """CEP inicial,Latitude inicial,Longitude inicial,Dia do voo,Hora inicial,Velocidade,CEP final,Latitude final,Longitude final,Pouso,Hora final
+82821020,-25.4284,-49.2733,5,18:30:00,50,82821020,-25.4284,-49.2733,SIM,19:01:00
+"""
+
+    # Recria o arquivo CSV com horário fora do limite
+    with open(nome_arquivo, 'w', encoding='utf-8') as f:
+        f.write(conteudo_csv)
+
+    # Executa a função e verifica se retorna False (o horário final está após 19:00)
+    assert verifica_arquivo_solucao(nome_arquivo) == False
+
+    # Remove o arquivo CSV temporário após o teste
+    os.remove(nome_arquivo)
+
+    # Verifica o caso de arquivo inexistente
+    assert verifica_arquivo_solucao("arquivo_inexistente.csv") == False
+

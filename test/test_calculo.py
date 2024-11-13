@@ -48,6 +48,3 @@ def test_calcula_angulo():
     # Ajuste para o ângulo esperado com base nos resultados obtidos
     assert abs(angulo - 137.9) < 1  # Novo valor esperado (137.9 graus)
 
-
-if __name__ == "__main__":
-    pytest.main()

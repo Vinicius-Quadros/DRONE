@@ -1,23 +1,29 @@
 import pandas as pd
 from previsao import vento_previsao
-from algoritimo import AlgoritmoGenetico
+from algoritimo import AlgoritmoGenetico, verifica_arquivo_solucao
 
 # Leitura das coordenadas a partir de um arquivo CSV
 coordenadas_df = pd.read_csv('coordenadas.csv')
 
-# Instanciar o algoritmo genético
-ag = AlgoritmoGenetico(
-    coordenadas=coordenadas_df,
-    populacao_tamanho=10,  # População pequena para teste
-    geracoes=10,  # Menor número de gerações para verificar execução
-    velocidade_base=30,
-    vento_previsao=vento_previsao
-)
+print("Buscando melhor rota...")  # Mensagem inicial
 
-# Evoluir para encontrar a melhor rota
-melhor_rota, _ = ag.evoluir()
+while True:
+    # Instanciar o algoritmo genético
+    ag = AlgoritmoGenetico(
+        coordenadas=coordenadas_df,
+        populacao_tamanho=10,
+        geracoes=2,
+        velocidade_base=30,
+        vento_previsao=vento_previsao
+    )
 
-# Geração do arquivo CSV com a melhor rota
-ag.gerar_csv_solucao(melhor_rota, nome_arquivo='solucao.csv')
+    # Evoluir para encontrar a melhor rota
+    melhor_rota, _ = ag.evoluir()
 
-print(f"Melhor rota encontrada: {melhor_rota}")
+    # Geração do arquivo CSV com a melhor rota
+    ag.gerar_csv_solucao(melhor_rota, nome_arquivo='solucao.csv')
+
+    # Verifica se o horário final está dentro do limite
+    if verifica_arquivo_solucao('solucao.csv'):
+        print("Solução encontrada!")
+        break
