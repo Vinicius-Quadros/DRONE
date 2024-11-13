@@ -1,7 +1,6 @@
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import pytest
 from calculo import calcula_distancia, ajusta_velocidade, calcula_angulo
 
 
