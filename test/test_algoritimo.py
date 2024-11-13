@@ -111,24 +111,49 @@ def test_evoluir():
     assert isinstance(melhor_fitness, float)
     assert melhor_fitness > 0
 
-# Configuração de dados fictícios para o teste
 coordenadas_data = {
-    'cep': ['82821020', '82821111', '82821222'],
-    'latitude': [-25.4284, -25.4294, -25.4304],
-    'longitude': [-49.2733, -49.2743, -49.2753]
+    'cep': ['82821020', '82821111', '82821222', '82821333'],
+    'latitude': [-25.4284, -25.4294, -25.4304, -25.4314],
+    'longitude': [-49.2733, -49.2743, -49.2753, -49.2763]
 }
 coordenadas = pd.DataFrame(coordenadas_data)
 vento_previsao = {
     1: {'06:00:00': {'velocidade': 10, 'angulo': 90}, '09:00:00': {'velocidade': 5, 'angulo': 180}},
     2: {'06:00:00': {'velocidade': 15, 'angulo': 270}, '09:00:00': {'velocidade': 20, 'angulo': 0}},
-    # Adicione mais dias e horários conforme necessário para os testes
 }
-populacao_tamanho = 2
-geracoes = 3
-velocidade_base = 50
 
-# Instância do algoritmo genético para usar nos testes
+# Configuração do algoritmo genético
+populacao_tamanho = 5
+geracoes = 2
+velocidade_base = 50
 algoritmo = AlgoritmoGenetico(coordenadas, populacao_tamanho, geracoes, velocidade_base, vento_previsao)
+
+
+def test_evoluir_selecao_cruzamento_mutacao():
+    with patch('random.random', return_value=0.05):  # Força a mutação ao manter random < 0.1
+        with patch.object(algoritmo, 'selecionar_pais') as mock_selecionar_pais:
+            # Retorno simulado para garantir que pais válidos sejam sempre selecionados
+            mock_selecionar_pais.return_value = (algoritmo.populacao[0], algoritmo.populacao[1])
+
+            with patch.object(algoritmo, 'mutacao') as mock_mutacao:
+                # Executa a evolução
+                melhor_rota, melhor_fitness = algoritmo.evoluir()
+
+                # Verificações de seleção e cruzamento
+                assert len(algoritmo.populacao) == populacao_tamanho  # Garante que a população mantém o tamanho
+
+                # Verifica se selecionar_pais e mutacao foram chamadas
+                assert mock_selecionar_pais.called, "selecionar_pais should have been called."
+                assert mock_mutacao.called, "mutacao should have been called."
+
+                # Verifica se a nova população mantém o CEP inicial e final corretos
+                for filho in algoritmo.populacao:
+                    assert filho[0] == coordenadas_data['cep'][0]  # Início com CEP da UniBrasil
+                    assert filho[-1] == coordenadas_data['cep'][0]  # Final com CEP da UniBrasil
+
+
+
+
 
 # Teste para gerar_csv_solucao
 def test_gerar_csv_solucao():
@@ -178,17 +203,25 @@ def test_calcula_fitness_rota_invalida():
     assert fitness == float('inf')  # Deve retornar penalidade máxima
 
 
-# Teste para selecionar_pais
 def test_selecionar_pais():
-    # Verifica se selecionar_pais retorna dois elementos da população
-    pai1, pai2 = algoritmo.selecionar_pais()
-    assert pai1 in algoritmo.populacao  # Verifica se o primeiro pai está na população
-    assert pai2 in algoritmo.populacao  # Verifica se o segundo pai está na população
+    # Gera uma população inicial com várias rotas diferentes
+    algoritmo.populacao = [
+        ['82821020', '82821111', '82821222', '82821020'],
+        ['82821020', '82821333', '82821444', '82821020'],
+        ['82821020', '82821222', '82821333', '82821020'],
+        ['82821020', '82821444', '82821111', '82821020'],
+        ['82821020', '82821111', '82821444', '82821020']
+    ]
 
-    # Verifica se há mais de um indivíduo único na população
-    populacao_unica = [tuple(individuo) for individuo in algoritmo.populacao]  # Converte cada rota para uma tupla
-    if len(set(populacao_unica)) > 1:
-        assert pai1 != pai2  # Confirma que os pais são diferentes
+    # Seleciona os pais
+    pai1, pai2 = algoritmo.selecionar_pais()
+
+    # Verifica se ambos os pais estão na população
+    assert pai1 in algoritmo.populacao, "pai1 não está na população"
+    assert pai2 in algoritmo.populacao, "pai2 não está na população"
+
+    # Confirma que os pais são diferentes
+    assert pai1 != pai2, "Os pais selecionados devem ser diferentes"
 
 
 def test_cruzamento_ajuste_comprimento():
@@ -242,4 +275,3 @@ def test_verifica_arquivo_solucao():
 
     # Verifica o caso de arquivo inexistente
     assert verifica_arquivo_solucao("arquivo_inexistente.csv") == False
-
