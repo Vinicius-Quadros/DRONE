@@ -1,7 +1,5 @@
 import math
 
-
-# Função para calcular a distância entre duas coordenadas usando a fórmula de Haversine
 def calcula_distancia(lat1, lon1, lat2, lon2):
     r = 6371.0  # Raio da Terra em km
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
@@ -12,16 +10,11 @@ def calcula_distancia(lat1, lon1, lat2, lon2):
     distancia = r * c
     return distancia * 1000  # Retorna a distância em metros
 
-
-# Função para ajustar a velocidade do drone considerando a influência do vento
 def ajusta_velocidade(velocidade_base, vento_velocidade, vento_angulo, angulo_voo):
     ajuste = math.cos(math.radians(vento_angulo - angulo_voo)) * vento_velocidade
     velocidade_ajustada = velocidade_base + ajuste
     return int(max(30, min(60, velocidade_ajustada)))
 
-
-
-# Função para calcular o ângulo de voo entre dois pontos
 def calcula_angulo(lat1, lon1, lat2, lon2):
     dlon = lon2 - lon1
     x = math.cos(math.radians(lat2)) * math.sin(math.radians(dlon))

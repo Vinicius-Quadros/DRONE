@@ -15,8 +15,8 @@ class AlgoritmoGenetico:
 
     def gera_populacao_inicial(self):
         ceps = self.coordenadas['cep'].tolist()
-        cep_unibrasil = ceps[0]  # Supondo que o primeiro CEP seja o da UniBrasil
-        ceps = ceps[1:]  # Remove a UniBrasil da lista para evitar duplicação
+        cep_unibrasil = ceps[0]
+        ceps = ceps[1:]
 
         populacao = []
         for _ in range(self.populacao_tamanho):
@@ -34,7 +34,7 @@ class AlgoritmoGenetico:
 
         cep_unibrasil = self.coordenadas['cep'].iloc[0]
         if rota[0] != cep_unibrasil or rota[-1] != cep_unibrasil:
-            return float('inf')  # Penalizar se a rota não começa/termina na UniBrasil
+            return float('inf')
 
         for i in range(1, len(rota)):
             cep_inicial = rota[i - 1]
@@ -59,30 +59,28 @@ class AlgoritmoGenetico:
             bateria_restante -= math.ceil(tempo_voo)
             hora_atual += math.ceil(tempo_voo)
 
-            # Verificar se é necessário recarregar e ajustar o tempo
             if bateria_restante <= 0 or hora_atual >= 68400:  # 19:00:00 em segundos
-                custo_total += 60  # Custo de recarga
+                custo_total += 60
                 bateria_restante = 1800
-                if hora_atual >= 68400:  # Se for após as 19:00, recarregar até o próximo dia
+                if hora_atual >= 68400:
                     dia_atual += 1
-                    hora_atual = 21600  # Voltar para 06:00:00
+                    hora_atual = 21600
                 else:
-                    hora_atual += 60  # Tempo de recarga durante o dia
+                    hora_atual += 60
 
             tempo_total += 60
             bateria_restante -= 60
-            hora_atual += 60  # Considerar o tempo de tirar fotos
+            hora_atual += 60
 
-            if dia_atual > 5:  # Não pode ultrapassar os 5 dias
-                return float('inf')  # Penalizar rotas que excedam os 5 dias
+            if dia_atual > 5:
+                return float('inf')
 
         return 1 / (tempo_total + custo_total)
 
     @staticmethod
     def obtem_previsao_vento(dia, hora):
-        # Arredonda o horário para o múltiplo de 3 horas mais próximo: 06:00, 09:00, 12:00, etc.
-        horas_disponiveis = [6, 9, 12, 15, 18]  # Horários padrão da previsão
-        hora_atual = hora // 3600  # Converter de segundos para horas
+        horas_disponiveis = [6, 9, 12, 15, 18]
+        hora_atual = hora // 3600
         hora_arredondada = min(horas_disponiveis, key=lambda x: abs(x - hora_atual))
         hora_formatada = f"{hora_arredondada:02}:00:00"
         return dia, hora_formatada
@@ -93,32 +91,27 @@ class AlgoritmoGenetico:
 
     @staticmethod
     def cruzamento(pai1, pai2):
-        ponto_corte = random.randint(1, len(pai1) - 2)  # Define ponto de corte sem alterar início/fim
-        filho = pai1[:ponto_corte]  # Primeira parte do filho vem do pai1 até o ponto de corte
-
-        # Adiciona as cidades do pai2 que ainda não estão no filho, mantendo a ordem
+        ponto_corte = random.randint(1, len(pai1) - 2)
+        filho = pai1[:ponto_corte]
         for cidade in pai2:
             if cidade not in filho:
                 filho.append(cidade)
 
-        # Garante que o início e o fim do filho sejam os mesmos do pai1
         filho[0] = pai1[0]
         filho[-1] = pai1[-1]
 
-        # Ajusta o tamanho do filho se necessário
         if len(filho) > len(pai1):
             filho = filho[:len(pai1)]
         elif len(filho) < len(pai1):
-            # Adiciona pontos que possam estar faltando para garantir o tamanho correto
             for cidade in pai1:
                 if cidade not in filho:
-                    filho.insert(-1, cidade)  # Insere antes do último ponto
+                    filho.insert(-1, cidade)
 
         return filho
 
     @staticmethod
     def mutacao(individuo):
-        i, j = random.sample(range(1, len(individuo) - 1), 2)  # Evita alterar o primeiro e último pontos
+        i, j = random.sample(range(1, len(individuo) - 1), 2)
         individuo[i], individuo[j] = individuo[j], individuo[i]
 
     def evoluir(self):
@@ -146,9 +139,9 @@ class AlgoritmoGenetico:
         return melhor_rota, 1 / melhor_fitness
 
     def gerar_csv_solucao(self, melhor_rota, nome_arquivo='solucao.csv'):
-        cep_unibrasil = self.coordenadas['cep'].iloc[0]  # CEP da UniBrasil
+        cep_unibrasil = self.coordenadas['cep'].iloc[0]
         if melhor_rota[-1] != cep_unibrasil:
-            melhor_rota[-1] = cep_unibrasil  # Força o retorno ao final
+            melhor_rota[-1] = cep_unibrasil
 
         with open(nome_arquivo, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['CEP inicial', 'Latitude inicial', 'Longitude inicial', 'Dia do voo',
@@ -157,10 +150,10 @@ class AlgoritmoGenetico:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
-            hora_atual = 21600  # 06:00:00 em segundos
+            hora_atual = 21600
             dia_atual = 1
-            bateria_restante = 1800  # Autonomia inicial em segundos (30 minutos)
-            cep_inicial = melhor_rota[0]  # Iniciar sempre na UniBrasil
+            bateria_restante = 1800
+            cep_inicial = melhor_rota[0]
 
             for i in range(1, len(melhor_rota)):
                 if dia_atual > 5:
@@ -186,15 +179,13 @@ class AlgoritmoGenetico:
                 tempo_voo = math.ceil(tempo_voo)
                 hora_formatada_inicio = f"{hora_atual // 3600:02}:{(hora_atual % 3600) // 60:02}:00"
 
-                # Verifica se o tempo de voo atual ultrapassa 19:00
                 if hora_atual + tempo_voo > 68400:
-                    # Se for o último dia, força o retorno à UniBrasil
                     if dia_atual == 5 and cep_final != cep_unibrasil:
                         coord_final = self.coordenadas[self.coordenadas['cep'] == cep_unibrasil]
                         lat2, lon2 = coord_final['latitude'].values[0], coord_final['longitude'].values[0]
-                        distancia = calcula_distancia(lat1, lon1, lat2, lon2)  # Recalcula a distância
+                        distancia = calcula_distancia(lat1, lon1, lat2, lon2)
                         tempo_voo = distancia / (self.velocidade_base * 1000 / 3600)
-                        tempo_voo = math.ceil(tempo_voo)  # Recalcula o tempo de voo com a velocidade base
+                        tempo_voo = math.ceil(tempo_voo)
 
                         hora_final = hora_atual + tempo_voo
                         hora_formatada_fim = f"{hora_final // 3600:02}:{(hora_final % 3600) // 60:02}:00"
@@ -213,14 +204,13 @@ class AlgoritmoGenetico:
                             'Hora final': hora_formatada_fim
                         })
                     cep_inicial = cep_inicial
-                    hora_atual = 21600  # Reinicia no próximo dia às 06:00:00
+                    hora_atual = 21600
                     dia_atual += 1
                     bateria_restante = 1800
                     if dia_atual > 5:
                         break
                     continue
 
-                # Atualiza o estado após o voo
                 hora_atual += tempo_voo
                 hora_formatada_fim = f"{hora_atual // 3600:02}:{(hora_atual % 3600) // 60:02}:00"
                 pouso_necessario = bateria_restante <= tempo_voo or hora_atual >= 68400
@@ -238,13 +228,10 @@ class AlgoritmoGenetico:
                     'Hora final': hora_formatada_fim
                 })
 
-                # Atualiza a bateria e o próximo ponto inicial
                 bateria_restante -= tempo_voo
                 if pouso_necessario:
                     bateria_restante = 1800
                 cep_inicial = cep_final
-
-                # Adiciona 1 minuto ao horário para o início da próxima linha
                 hora_atual += 60
 
 def verifica_arquivo_solucao(nome_arquivo='solucao.csv'):
