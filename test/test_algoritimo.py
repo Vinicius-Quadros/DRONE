@@ -5,7 +5,6 @@ from unittest.mock import patch
 import pandas as pd
 from algoritimo import AlgoritmoGenetico, verifica_arquivo_solucao
 
-
 coordenadas_data = {
     'cep': ['82821020', '82821111', '82821222'],
     'latitude': [-25.4284, -25.4294, -25.4304],
@@ -27,8 +26,6 @@ def test_gera_populacao_inicial():
     assert len(populacao) == populacao_tamanho
     assert all(pop[0] == coordenadas_data['cep'][0] for pop in populacao)
     assert all(pop[-1] == coordenadas_data['cep'][0] for pop in populacao)
-
-
 
 def test_calcula_fitness():
     rota = ['82821020', '82821111', '82821020']
@@ -88,23 +85,22 @@ def test_evoluir():
     assert isinstance(melhor_fitness, float)
     assert melhor_fitness > 0
 
-coordenadas_data = {
-    'cep': ['82821020', '82821111', '82821222', '82821333'],
-    'latitude': [-25.4284, -25.4294, -25.4304, -25.4314],
-    'longitude': [-49.2733, -49.2743, -49.2753, -49.2763]
-}
-coordenadas = pd.DataFrame(coordenadas_data)
-vento_previsao = {
-    1: {'06:00:00': {'velocidade': 10, 'angulo': 90}, '09:00:00': {'velocidade': 5, 'angulo': 180}},
-    2: {'06:00:00': {'velocidade': 15, 'angulo': 270}, '09:00:00': {'velocidade': 20, 'angulo': 0}},
-}
-populacao_tamanho = 5
-geracoes = 2
-velocidade_base = 50
-algoritmo = AlgoritmoGenetico(coordenadas, populacao_tamanho, geracoes, velocidade_base, vento_previsao)
-
-
 def test_evoluir_selecao_cruzamento_mutacao():
+    coordenadas_data = {
+        'cep': ['82821020', '82821111', '82821222', '82821333'],
+        'latitude': [-25.4284, -25.4294, -25.4304, -25.4314],
+        'longitude': [-49.2733, -49.2743, -49.2753, -49.2763]
+    }
+    coordenadas = pd.DataFrame(coordenadas_data)
+    vento_previsao = {
+        1: {'06:00:00': {'velocidade': 10, 'angulo': 90}, '09:00:00': {'velocidade': 5, 'angulo': 180}},
+        2: {'06:00:00': {'velocidade': 15, 'angulo': 270}, '09:00:00': {'velocidade': 20, 'angulo': 0}},
+    }
+    populacao_tamanho = 5
+    geracoes = 2
+    velocidade_base = 50
+    algoritmo = AlgoritmoGenetico(coordenadas, populacao_tamanho, geracoes, velocidade_base, vento_previsao)
+
     with patch('random.random', return_value=0.05):
         with patch.object(algoritmo, 'selecionar_pais') as mock_selecionar_pais:
             mock_selecionar_pais.return_value = (algoritmo.populacao[0], algoritmo.populacao[1])

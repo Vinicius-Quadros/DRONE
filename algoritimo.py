@@ -25,6 +25,43 @@ class AlgoritmoGenetico:
 
         return populacao
 
+    @staticmethod
+    def obtem_previsao_vento(dia, hora):
+        horas_disponiveis = [6, 9, 12, 15, 18]
+        hora_atual = hora // 3600
+        hora_arredondada = min(horas_disponiveis, key=lambda x: abs(x - hora_atual))
+        hora_formatada = f"{hora_arredondada:02}:00:00"
+        return dia, hora_formatada
+
+    def selecionar_pais(self):
+        pais = random.sample(self.populacao, 2)
+        return pais[0], pais[1]
+
+    @staticmethod
+    def cruzamento(pai1, pai2):
+        ponto_corte = random.randint(1, len(pai1) - 2)
+        filho = pai1[:ponto_corte]
+        for cidade in pai2:
+            if cidade not in filho:
+                filho.append(cidade)
+
+        filho[0] = pai1[0]
+        filho[-1] = pai1[-1]
+
+        if len(filho) > len(pai1):
+            filho = filho[:len(pai1)]
+        elif len(filho) < len(pai1):
+            for cidade in pai1:
+                if cidade not in filho:
+                    filho.insert(-1, cidade)
+
+        return filho
+
+    @staticmethod
+    def mutacao(individuo):
+        i, j = random.sample(range(1, len(individuo) - 1), 2)
+        individuo[i], individuo[j] = individuo[j], individuo[i]
+
     def calcula_fitness(self, rota):
         custo_total = 0
         tempo_total = 0
@@ -76,43 +113,6 @@ class AlgoritmoGenetico:
                 return float('inf')
 
         return 1 / (tempo_total + custo_total)
-
-    @staticmethod
-    def obtem_previsao_vento(dia, hora):
-        horas_disponiveis = [6, 9, 12, 15, 18]
-        hora_atual = hora // 3600
-        hora_arredondada = min(horas_disponiveis, key=lambda x: abs(x - hora_atual))
-        hora_formatada = f"{hora_arredondada:02}:00:00"
-        return dia, hora_formatada
-
-    def selecionar_pais(self):
-        pais = random.sample(self.populacao, 2)
-        return pais[0], pais[1]
-
-    @staticmethod
-    def cruzamento(pai1, pai2):
-        ponto_corte = random.randint(1, len(pai1) - 2)
-        filho = pai1[:ponto_corte]
-        for cidade in pai2:
-            if cidade not in filho:
-                filho.append(cidade)
-
-        filho[0] = pai1[0]
-        filho[-1] = pai1[-1]
-
-        if len(filho) > len(pai1):
-            filho = filho[:len(pai1)]
-        elif len(filho) < len(pai1):
-            for cidade in pai1:
-                if cidade not in filho:
-                    filho.insert(-1, cidade)
-
-        return filho
-
-    @staticmethod
-    def mutacao(individuo):
-        i, j = random.sample(range(1, len(individuo) - 1), 2)
-        individuo[i], individuo[j] = individuo[j], individuo[i]
 
     def evoluir(self):
         for _ in range(self.geracoes):
