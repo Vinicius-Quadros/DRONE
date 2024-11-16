@@ -93,7 +93,8 @@ class AlgoritmoGenetico:
 
             tempo_voo = distancia / (velocidade_ajustada * 1000 / 3600)
             tempo_total += math.ceil(tempo_voo)
-            bateria_restante -= math.ceil(tempo_voo)
+            taxa_de_consumo = (velocidade_ajustada / self.velocidade_base) ** 3
+            bateria_restante -= math.ceil(tempo_voo * taxa_de_consumo)
             hora_atual += math.ceil(tempo_voo)
 
             if bateria_restante <= 0 or hora_atual >= 68400:  # 19:00:00 em segundos
