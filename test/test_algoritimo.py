@@ -189,3 +189,29 @@ def test_verifica_arquivo_solucao():
     assert verifica_arquivo_solucao(nome_arquivo) == False
     os.remove(nome_arquivo)
     assert verifica_arquivo_solucao("arquivo_inexistente.csv") == False
+
+
+def test_calcula_fitness_distancia_excede_limite():
+    # Criar coordenadas com distância maior que 15 km
+    coordenadas_data = {
+        'cep': ['82821020', '99999999'],
+        'latitude': [-25.4284, -25.7000],  # Latitude distante
+        'longitude': [-49.2733, -49.5000]  # Longitude distante
+    }
+    coordenadas = pd.DataFrame(coordenadas_data)
+    vento_previsao = {
+        1: {'06:00:00': {'velocidade': 10, 'angulo': 90}, '09:00:00': {'velocidade': 5, 'angulo': 180}},
+    }
+    algoritmo = AlgoritmoGenetico(coordenadas, populacao_tamanho=2, geracoes=2, velocidade_base=50,
+                                  vento_previsao=vento_previsao)
+
+    # Criar uma rota que exceda 15 km
+    rota_invalida = ['82821020', '99999999', '82821020']
+
+    # Verificar se a função retorna infinito para rotas inválidas
+    fitness = algoritmo.calcula_fitness(rota_invalida)
+    assert fitness == float('inf'), "O fitness deveria ser infinito para uma rota inválida."
+
+
+
+
