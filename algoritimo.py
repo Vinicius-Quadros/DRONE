@@ -82,6 +82,9 @@ class AlgoritmoGenetico:
             lat2, lon2 = coord_final['latitude'].values[0], coord_final['longitude'].values[0]
 
             distancia = calcula_distancia(lat1, lon1, lat2, lon2)
+            if distancia > 15000:  # 15 km
+                return float('inf')  # Rota inválida
+
             angulo_voo = calcula_angulo(lat1, lon1, lat2, lon2)
             dia_voo, horario_voo = self.obtem_previsao_vento(dia_atual, hora_atual)
             velocidade_ajustada = ajusta_velocidade(
@@ -167,6 +170,9 @@ class AlgoritmoGenetico:
                 lat2, lon2 = coord_final['latitude'].values[0], coord_final['longitude'].values[0]
 
                 distancia = calcula_distancia(lat1, lon1, lat2, lon2)
+                if distancia > 15000:  # 15 km
+                    continue  # Pule para o próximo destino
+
                 angulo_voo = calcula_angulo(lat1, lon1, lat2, lon2)
                 dia_voo, horario_voo = self.obtem_previsao_vento(dia_atual, hora_atual)
                 velocidade_ajustada = ajusta_velocidade(
@@ -180,7 +186,7 @@ class AlgoritmoGenetico:
                 tempo_voo = math.ceil(tempo_voo)
                 hora_formatada_inicio = f"{hora_atual // 3600:02}:{(hora_atual % 3600) // 60:02}:00"
 
-                if hora_atual + tempo_voo > 68400:
+                if hora_atual + tempo_voo > 68400:  # Após 19:00:00
                     if dia_atual == 5 and cep_final != cep_unibrasil:
                         coord_final = self.coordenadas[self.coordenadas['cep'] == cep_unibrasil]
                         lat2, lon2 = coord_final['latitude'].values[0], coord_final['longitude'].values[0]
