@@ -12,11 +12,6 @@ coordenadas_data = {
     'longitude': [-49.2733, -49.2743, -49.2753]
 }
 coordenadas = pd.DataFrame(coordenadas_data)
-vento_previsao = {
-    1: {'06:00:00': {'velocidade': 10, 'angulo': 90}, '09:00:00': {'velocidade': 5, 'angulo': 180}},
-    2: {'06:00:00': {'velocidade': 15, 'angulo': 270}, '09:00:00': {'velocidade': 20, 'angulo': 0}},
-    # Adicione mais dias e horários conforme necessário para os testes
-}
 populacao_tamanho = 2
 geracoes = 3
 velocidade_base = 50
@@ -123,11 +118,11 @@ def test_gerar_csv_solucao():
     with open(nome_arquivo, 'r', encoding='utf-8') as file:
         linhas = file.readlines()
         assert len(linhas) > 1
-        cabeçalho = linhas[0].strip().split(',')
+        cabecalho = linhas[0].strip().split(',')
         campos_esperados = ['CEP inicial', 'Latitude inicial', 'Longitude inicial', 'Dia do voo',
                             'Hora inicial', 'Velocidade', 'CEP final', 'Latitude final', 'Longitude final',
                             'Pouso', 'Hora final']
-        assert cabeçalho == campos_esperados
+        assert cabecalho == campos_esperados
         primeira_linha = linhas[1].strip().split(',')
         ultima_linha = linhas[-1].strip().split(',')
 
@@ -193,11 +188,10 @@ def test_verifica_arquivo_solucao():
 
 
 def test_calcula_fitness_distancia_excede_limite():
-    # Criar coordenadas com distância maior que 15 km
     coordenadas_data = {
         'cep': ['82821020', '99999999'],
-        'latitude': [-25.4284, -25.7000],  # Latitude distante
-        'longitude': [-49.2733, -49.5000]  # Longitude distante
+        'latitude': [-25.4284, -25.7000],
+        'longitude': [-49.2733, -49.5000]
     }
     coordenadas = pd.DataFrame(coordenadas_data)
     vento_previsao = {
@@ -206,10 +200,8 @@ def test_calcula_fitness_distancia_excede_limite():
     algoritmo = AlgoritmoGenetico(coordenadas, populacao_tamanho=2, geracoes=2, velocidade_base=50,
                                   vento_previsao=vento_previsao)
 
-    # Criar uma rota que exceda 15 km
     rota_invalida = ['82821020', '99999999', '82821020']
 
-    # Verificar se a função retorna infinito para rotas inválidas
     fitness = algoritmo.calcula_fitness(rota_invalida)
     assert fitness == float('inf'), "O fitness deveria ser infinito para uma rota inválida."
 
@@ -235,21 +227,18 @@ def test_ajuste_rota_final_unibrasil_dias_incrementados():
             patch("builtins.open", new_callable=MagicMock), \
             patch("csv.DictWriter", csv_writer_mock):
 
-        # Simula uma rota longa e força o ajuste do último CEP
-        melhor_rota = ['82821222', '82821111', '82821020'] * 100  # Rota longa o suficiente para ultrapassar o dia 4
-        melhor_rota.append('82821020')  # Garante o último CEP como UniBrasil
+        melhor_rota = ['82821222', '82821111', '82821020'] * 100
+        melhor_rota.append('82821020')
 
-        # Sincroniza os horários do algoritmo com os horários válidos na previsão de vento
         dias_validos = sorted(vento_previsao.keys())
         horarios_validos = sorted(list(vento_previsao[1].keys()))
         algoritmo.obtem_previsao_vento = lambda dia, hora: (
-            dias_validos[(dia - 1) % len(dias_validos)],  # Garante que o dia está dentro dos válidos
-            horarios_validos[hora % len(horarios_validos)]  # Garante que o horário é válido
+            dias_validos[(dia - 1) % len(dias_validos)],
+            horarios_validos[hora % len(horarios_validos)]
         )
 
         algoritmo.gerar_csv_solucao(melhor_rota, nome_arquivo="mock.csv")
 
-        # Verifica as chamadas ao writer
         mock_writer.writerow.assert_called()
         chamadas = mock_writer.writerow.call_args_list
 
@@ -259,10 +248,8 @@ def test_ajuste_rota_final_unibrasil_dias_incrementados():
             dias_usados.add(linha['Dia do voo'])
             print(f"Chamada {idx + 1}: Dia do voo = {linha['Dia do voo']}, Hora final = {linha['Hora final']}")
 
-        # Garante que os dias usados foram de 1 a 5
         assert dias_usados == {1, 2, 3, 4, 5}, f"Os dias usados deveriam ser de 1 a 5, mas foram {dias_usados}"
 
-        # Verifica o último CEP
         ultima_chamada = chamadas[-1][0][0]
         assert ultima_chamada[
                    'CEP final'] == '82821020', f"O CEP final deveria ser ajustado para UniBrasil, mas foi {ultima_chamada['CEP final']}."
