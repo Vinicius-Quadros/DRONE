@@ -1,9 +1,10 @@
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import pandas as pd
 from algoritimo import AlgoritmoGenetico, verifica_arquivo_solucao
+from previsao import vento_previsao
 
 coordenadas_data = {
     'cep': ['82821020', '82821111', '82821222'],
@@ -211,6 +212,60 @@ def test_calcula_fitness_distancia_excede_limite():
     # Verificar se a função retorna infinito para rotas inválidas
     fitness = algoritmo.calcula_fitness(rota_invalida)
     assert fitness == float('inf'), "O fitness deveria ser infinito para uma rota inválida."
+
+
+def test_ajuste_rota_final_unibrasil_dias_incrementados():
+    coordenadas_data = {
+        'cep': ['82821020', '82821111', '82821222'],
+        'latitude': [-25.4284, -25.5284, -25.6284],
+        'longitude': [-49.2733, -49.3733, -49.4733]
+    }
+    coordenadas = pd.DataFrame(coordenadas_data)
+    velocidade_base = 50
+    algoritmo = AlgoritmoGenetico(
+        coordenadas, populacao_tamanho=1, geracoes=1, velocidade_base=velocidade_base, vento_previsao=vento_previsao
+    )
+
+    mock_writer = MagicMock()
+    csv_writer_mock = MagicMock(return_value=mock_writer)
+
+    with patch("calculo.calcula_distancia", side_effect=lambda lat1, lon1, lat2, lon2: 25000), \
+            patch("calculo.calcula_angulo", side_effect=lambda lat1, lon1, lat2, lon2: 90), \
+            patch("calculo.ajusta_velocidade", side_effect=lambda base, vento_vel, vento_angulo, voo_angulo: base), \
+            patch("builtins.open", new_callable=MagicMock), \
+            patch("csv.DictWriter", csv_writer_mock):
+
+        # Simula uma rota longa e força o ajuste do último CEP
+        melhor_rota = ['82821222', '82821111', '82821020'] * 100  # Rota longa o suficiente para ultrapassar o dia 4
+        melhor_rota.append('82821020')  # Garante o último CEP como UniBrasil
+
+        # Sincroniza os horários do algoritmo com os horários válidos na previsão de vento
+        dias_validos = sorted(vento_previsao.keys())
+        horarios_validos = sorted(list(vento_previsao[1].keys()))
+        algoritmo.obtem_previsao_vento = lambda dia, hora: (
+            dias_validos[(dia - 1) % len(dias_validos)],  # Garante que o dia está dentro dos válidos
+            horarios_validos[hora % len(horarios_validos)]  # Garante que o horário é válido
+        )
+
+        algoritmo.gerar_csv_solucao(melhor_rota, nome_arquivo="mock.csv")
+
+        # Verifica as chamadas ao writer
+        mock_writer.writerow.assert_called()
+        chamadas = mock_writer.writerow.call_args_list
+
+        dias_usados = set()
+        for idx, chamada in enumerate(chamadas):
+            linha = chamada[0][0]
+            dias_usados.add(linha['Dia do voo'])
+            print(f"Chamada {idx + 1}: Dia do voo = {linha['Dia do voo']}, Hora final = {linha['Hora final']}")
+
+        # Garante que os dias usados foram de 1 a 5
+        assert dias_usados == {1, 2, 3, 4, 5}, f"Os dias usados deveriam ser de 1 a 5, mas foram {dias_usados}"
+
+        # Verifica o último CEP
+        ultima_chamada = chamadas[-1][0][0]
+        assert ultima_chamada[
+                   'CEP final'] == '82821020', f"O CEP final deveria ser ajustado para UniBrasil, mas foi {ultima_chamada['CEP final']}."
 
 
 
